@@ -1,0 +1,115 @@
+services:
+  postgresql:
+    image: postgres:15
+    restart: always
+    container_name: postgresql
+    hostname: psql
+    environment:
+      POSTGRES_USER: psql_user
+      POSTGRES_PASSWORD: SecretPassword!1234
+      POSTGRES_DB: example_table
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.data/psql:/var/lib/postgresql/data
+
+  postgresql-admin:
+    image: dpage/pgadmin4:latest
+    container_name: postgresql-admin
+    hostname: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user@example.com
+      PGADMIN_DEFAULT_PASSWORD: SecretPassword!1234
+    ports:
+      - "8088:80"
+    depends_on:
+      - postgresql
+
+  mysql:
+    image: mysql:9
+    restart: always
+    container_name: mysql
+    hostname: mysql
+    environment:
+      MYSQL_USER: mysql_user
+      MYSQL_ROOT_PASSWORD: SecretPassword!1234
+      MYSQL_PASSWORD: SecretPassword!1234
+      MYSQL_DATABASE: example_table
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./.data/mysql:/var/lib/mysql
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: always
+    container_name: mssql
+    hostname: mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Express
+      MSSQL_SA_PASSWORD: SecretPassword!1234
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./.data/mssql:/var/opt/mssql/data
+      - ./.data/mssql/log:/var/opt/mssql/log
+      - ./.data/mssql/secrets:/var/opt/mssql/secrets
+
+  libsql:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    container_name: libsql
+    hostname: libsql
+    platform: linux/amd64
+    environment:
+      - SQLD_NODE=primary
+    ports:
+      - "5001:5001"
+      - "8080:8080"
+    volumes:
+      - ./.data/sqld:/var/lib/sqld
+
+  smtp4dev:
+    image: rnwood/smtp4dev:latest
+    container_name: smtp4dev
+    hostname: smtp4dev
+    restart: always
+    ports:
+      - "1080:80"
+      - "25:25"
+      - "143:143"
+    volumes:
+      - ./.data/smtp:/smtp4dev
+
+  valkey-cache:
+    image: valkey/valkey
+    container_name: valkey-cache
+    hostname: valkey
+    command: valkey-server /etc/valkey/valkey.conf
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+    ports:
+      - 6379:6379
+    volumes:
+      - ./conf/valkey.conf:/etc/valkey/valkey.conf
+      - ./.data/valkey:/usr/local/etc/valkey
+
+  minio-object-storage:
+    image: quay.io/minio/minio
+    container_name: minio-object-storage
+    hostname: minio
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - 9000:9000
+      - 9001:9001
+    volumes:
+      - ./.data/minio:/data
